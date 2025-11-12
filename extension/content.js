@@ -31,7 +31,7 @@ function enterSelectionMode() {
   overlay.id = 'readie-overlay';
   overlay.innerHTML = `
     <div class="readie-instruction">
-      Press <strong>Cmd+Shift+R</strong> again to cancel, or drag to select an area
+      Press <strong>Alt+Shift+R</strong> again to cancel, or drag to select an area
     </div>
   `;
   document.body.appendChild(overlay);

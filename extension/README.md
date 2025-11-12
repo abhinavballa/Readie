@@ -32,7 +32,7 @@ Get your API key from [platform.openai.com/api-keys](https://platform.openai.com
 
 ## Usage
 
-1. **Activate**: Press `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows/Linux)
+1. **Activate**: Press `Alt+Shift+R` (or `Option+Shift+R` on Mac)
 2. **Select**: Drag to select any area on the screen
 3. **Ask**: Type your question about the selected content
 4. **Get Answer**: Receive AI-powered explanations instantly
@@ -48,7 +48,7 @@ Get your API key from [platform.openai.com/api-keys](https://platform.openai.com
 
 ## Keyboard Shortcuts
 
-- `Cmd+Shift+R` / `Ctrl+Shift+R` - Toggle selection mode
+- `Alt+Shift+R` (or `Option+Shift+R` on Mac) - Toggle selection mode
 - `Escape` - Cancel selection or close panel
 - `Enter` - Submit question (Shift+Enter for new line)
 
@@ -74,7 +74,7 @@ You can customize the keyboard shortcut:
 
 ### Selection not working
 - Try reloading the page
-- Make sure you're pressing the correct keyboard shortcut (Cmd+Shift+R or Ctrl+Shift+R)
+- Make sure you're pressing the correct keyboard shortcut (Alt+Shift+R or Option+Shift+R)
 - Check if another extension is interfering
 
 ### Icons not showing

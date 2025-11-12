@@ -14,7 +14,7 @@ A universal reading copilot Chrome extension that works on any text displayed on
 
 1. **Install**: Load the extension from the `extension/` folder
 2. **Configure**: Add your OpenAI API key in settings
-3. **Use**: Press `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows), drag to select, ask questions
+3. **Use**: Press `Alt+Shift+R` (or `Option+Shift+R` on Mac), drag to select, ask questions
 
 See [extension/README.md](extension/README.md) for detailed installation and usage instructions.
 
