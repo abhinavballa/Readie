@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 400px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      margin: 0;
+      background: #f9fafb;
+    }
+
+    h2 {
+      font-size: 20px;
+      margin: 0 0 20px 0;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo {
+      font-size: 24px;
+    }
+
+    .section {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    input[type="password"] {
+      font-family: monospace;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #4A90E2;
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .help-text a {
+      color: #4A90E2;
+      text-decoration: none;
+    }
+
+    .help-text a:hover {
+      text-decoration: underline;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4A90E2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #357ABD;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .status {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      text-align: center;
+      display: none;
+    }
+
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+      display: block;
+    }
+
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      display: block;
+    }
+
+    .info-box {
+      background: #f0f9ff;
+      padding: 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #0c4a6e;
+      line-height: 1.6;
+      border: 1px solid #bae6fd;
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #075985;
+    }
+
+    .shortcut {
+      background: #1f2937;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <h2>
+    <span class="logo">📖</span>
+    Readie Settings
+  </h2>
+
+  <div class="section">
+    <label for="openaiKey">OpenAI API Key</label>
+    <input type="password" id="openaiKey" placeholder="sk-...">
+    <div class="help-text">
+      Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+    </div>
+  </div>
+
+  <button id="save">Save API Key</button>
+
+  <div id="status" class="status"></div>
+
+  <div class="section" style="margin-top: 16px;">
+    <div class="info-box">
+      <strong>How to use Readie:</strong>
+      1. Press <span class="shortcut">Cmd+Shift+R</span> (Mac) or <span class="shortcut">Ctrl+Shift+R</span> (Windows/Linux)<br>
+      2. Drag to select any area on the screen<br>
+      3. Ask questions about what you selected<br><br>
+      <strong>Note:</strong> Your API key is stored locally and only sent directly to OpenAI.
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
