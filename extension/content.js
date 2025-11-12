@@ -8,13 +8,16 @@ let queryPanel = null;
 
 // Listen for toggle command from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Readie content: Message received:', request.action);
   if (request.action === 'toggleSelection') {
+    console.log('Readie content: Toggling selection mode');
     toggleSelectionMode();
   }
 });
 
 // Toggle selection mode
 function toggleSelectionMode() {
+  console.log('Readie: toggleSelectionMode called, current state:', isSelectionMode);
   if (isSelectionMode) {
     exitSelectionMode();
   } else {

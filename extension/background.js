@@ -17,10 +17,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Keyboard shortcut handler
 chrome.commands.onCommand.addListener((command) => {
+  console.log('Readie: Command received:', command);
   if (command === "toggle-selection") {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: "toggleSelection" });
+        console.log('Readie: Sending toggle message to tab:', tabs[0].id);
+        chrome.tabs.sendMessage(tabs[0].id, { action: "toggleSelection" })
+          .catch(error => {
+            console.error('Readie: Error sending message to content script:', error);
+            console.log('Readie: Please reload the webpage to activate Readie on this page');
+          });
       }
     });
   }
