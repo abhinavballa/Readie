@@ -5,6 +5,8 @@ let selectionBox = null;
 let startX, startY;
 let overlay = null;
 let queryPanel = null;
+let conversationHistory = []; // Store conversation messages
+let currentImageData = null; // Store current screenshot
 
 // Listen for toggle command from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -209,8 +211,12 @@ function showLoadingPanel() {
 }
 
 // Show query panel
-async function showQueryPanel(imageData, rect) {
+async function showQueryPanel(imageData) {
   closeQueryPanel();
+
+  // Reset conversation for new screenshot
+  conversationHistory = [];
+  currentImageData = imageData;
 
   queryPanel = document.createElement('div');
   queryPanel.id = 'readie-query-panel';
@@ -223,11 +229,11 @@ async function showQueryPanel(imageData, rect) {
       <div class="readie-screenshot-preview">
         <img src="${imageData}" alt="Screenshot">
       </div>
+      <div id="readie-chat-history" class="readie-chat-history"></div>
       <div class="readie-input-area">
         <textarea id="readie-question-input" placeholder="Ask a question about this image..."></textarea>
         <button id="readie-submit-btn">Ask</button>
       </div>
-      <div id="readie-answer-area" class="readie-answer-area" style="display: none;"></div>
     </div>
   `;
 
@@ -243,7 +249,7 @@ async function showQueryPanel(imageData, rect) {
   submitBtn.addEventListener('click', () => {
     const question = questionInput.value.trim();
     if (question) {
-      submitQuery(question, imageData);
+      submitQuery(question);
     }
   });
 
@@ -253,7 +259,7 @@ async function showQueryPanel(imageData, rect) {
       e.preventDefault();
       const question = questionInput.value.trim();
       if (question) {
-        submitQuery(question, imageData);
+        submitQuery(question);
       }
     }
   });
@@ -263,54 +269,119 @@ async function showQueryPanel(imageData, rect) {
 }
 
 // Submit query to OpenAI
-async function submitQuery(question, imageData) {
-  const answerArea = queryPanel.querySelector('#readie-answer-area');
+async function submitQuery(question) {
+  const chatHistory = queryPanel.querySelector('#readie-chat-history');
   const submitBtn = queryPanel.querySelector('#readie-submit-btn');
   const questionInput = queryPanel.querySelector('#readie-question-input');
 
+  // Add user message to history
+  addMessageToChat('user', question);
+
+  // Clear input
+  questionInput.value = '';
+
   // Show loading
-  answerArea.style.display = 'block';
-  answerArea.innerHTML = '<div class="readie-loading">Thinking...</div>';
+  const loadingId = addMessageToChat('assistant', '<div class="readie-loading">Thinking...</div>', true);
   submitBtn.disabled = true;
   questionInput.disabled = true;
 
   try {
     // Remove data:image/png;base64, prefix if present
-    const base64Data = imageData.split(',')[1];
+    const base64Data = currentImageData.split(',')[1];
 
-    // Send to background script
+    // Send to background script with conversation history
     const response = await chrome.runtime.sendMessage({
       action: 'queryLLM',
       question: question,
-      imageData: base64Data
+      imageData: base64Data,
+      conversationHistory: conversationHistory
     });
 
     if (response.error) {
       throw new Error(response.error);
     }
 
-    // Show answer
-    answerArea.innerHTML = `
-      <div class="readie-answer">
-        <strong>Answer:</strong>
-        <p>${response.answer.replace(/\n/g, '<br>')}</p>
-        <div class="readie-meta">
-          Model: ${response.model} | Tokens: ${response.tokens_used}
-        </div>
-      </div>
-    `;
+    // Remove loading message
+    removeMessageFromChat(loadingId);
+
+    // Add assistant response to history
+    addMessageToChat('assistant', response.answer, false, response.model, response.tokens_used);
+
+    // Store in conversation history
+    conversationHistory.push({
+      role: 'user',
+      content: question
+    });
+    conversationHistory.push({
+      role: 'assistant',
+      content: response.answer
+    });
 
   } catch (error) {
     console.error('Query error:', error);
-    answerArea.innerHTML = `
-      <div class="readie-error">
-        <strong>Error:</strong> ${error.message}
-      </div>
-    `;
+    // Remove loading message
+    removeMessageFromChat(loadingId);
+    // Add error message
+    addMessageToChat('error', error.message);
   } finally {
     submitBtn.disabled = false;
     questionInput.disabled = false;
+    questionInput.focus();
   }
+}
+
+// Add message to chat history UI
+function addMessageToChat(role, content, isLoading = false, model = null, tokens = null) {
+  const chatHistory = queryPanel.querySelector('#readie-chat-history');
+  const messageId = 'msg-' + Date.now() + '-' + Math.random();
+
+  const messageDiv = document.createElement('div');
+  messageDiv.id = messageId;
+  messageDiv.className = `readie-message readie-message-${role}`;
+
+  if (role === 'user') {
+    messageDiv.innerHTML = `
+      <div class="readie-message-label">You</div>
+      <div class="readie-message-content">${escapeHtml(content)}</div>
+    `;
+  } else if (role === 'assistant') {
+    let metaInfo = '';
+    if (model && tokens) {
+      metaInfo = `<div class="readie-message-meta">Model: ${model} | Tokens: ${tokens}</div>`;
+    }
+    messageDiv.innerHTML = `
+      <div class="readie-message-label">Assistant</div>
+      <div class="readie-message-content">${isLoading ? content : escapeHtml(content).replace(/\n/g, '<br>')}</div>
+      ${metaInfo}
+    `;
+  } else if (role === 'error') {
+    messageDiv.innerHTML = `
+      <div class="readie-message-label">Error</div>
+      <div class="readie-message-content">${escapeHtml(content)}</div>
+    `;
+  }
+
+  chatHistory.appendChild(messageDiv);
+
+  // Scroll to bottom
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+
+  return messageId;
+}
+
+// Remove message from chat (used for loading messages)
+function removeMessageFromChat(messageId) {
+  const message = document.getElementById(messageId);
+  if (message) {
+    message.remove();
+  }
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Close query panel

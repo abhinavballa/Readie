@@ -8,7 +8,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'queryLLM') {
-    handleLLMQuery(request.question, request.imageData)
+    handleLLMQuery(request.question, request.imageData, request.conversationHistory)
       .then(response => sendResponse(response))
       .catch(error => sendResponse({ error: error.message }));
     return true; // Keep channel open for async response
@@ -43,7 +43,7 @@ async function handleCaptureTab(sendResponse) {
 }
 
 // Query OpenAI with image and question
-async function handleLLMQuery(question, imageData) {
+async function handleLLMQuery(question, imageData, conversationHistory = []) {
   try {
     // Get API key from storage
     const { openaiApiKey } = await chrome.storage.sync.get(['openaiApiKey']);
@@ -52,7 +52,7 @@ async function handleLLMQuery(question, imageData) {
       throw new Error('OpenAI API key not configured. Please add it in settings.');
     }
 
-    return await queryOpenAI(question, imageData, openaiApiKey);
+    return await queryOpenAI(question, imageData, conversationHistory, openaiApiKey);
   } catch (error) {
     console.error('OpenAI Query error:', error);
     return { error: error.message };
@@ -60,7 +60,61 @@ async function handleLLMQuery(question, imageData) {
 }
 
 // Query OpenAI GPT-4 Vision
-async function queryOpenAI(question, imageBase64, apiKey) {
+async function queryOpenAI(question, imageBase64, conversationHistory, apiKey) {
+  // Build messages array with conversation history
+  const messages = [];
+
+  // Add the image as the first message if this is the start of conversation
+  if (conversationHistory.length === 0) {
+    messages.push({
+      role: 'user',
+      content: [
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:image/png;base64,${imageBase64}`
+          }
+        },
+        {
+          type: 'text',
+          text: question
+        }
+      ]
+    });
+  } else {
+    // Include previous conversation history
+    // First message should include the image
+    messages.push({
+      role: 'user',
+      content: [
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:image/png;base64,${imageBase64}`
+          }
+        },
+        {
+          type: 'text',
+          text: conversationHistory[0].content
+        }
+      ]
+    });
+
+    // Add rest of the conversation (excluding first user message)
+    for (let i = 1; i < conversationHistory.length; i++) {
+      messages.push({
+        role: conversationHistory[i].role,
+        content: conversationHistory[i].content
+      });
+    }
+
+    // Add current question
+    messages.push({
+      role: 'user',
+      content: question
+    });
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -69,23 +123,7 @@ async function queryOpenAI(question, imageBase64, apiKey) {
     },
     body: JSON.stringify({
       model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/png;base64,${imageBase64}`
-              }
-            },
-            {
-              type: 'text',
-              text: question
-            }
-          ]
-        }
-      ],
+      messages: messages,
       max_tokens: 1000
     })
   });
