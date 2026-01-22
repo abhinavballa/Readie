@@ -351,7 +351,7 @@ function addMessageToChat(role, content, isLoading = false, model = null, tokens
     }
     messageDiv.innerHTML = `
       <div class="readie-message-label">Assistant</div>
-      <div class="readie-message-content">${isLoading ? content : escapeHtml(content).replace(/\n/g, '<br>')}</div>
+      <div class="readie-message-content">${isLoading ? content : parseMarkdownContent(content)}</div>
       ${metaInfo}
     `;
   } else if (role === 'error') {
@@ -383,6 +383,102 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// Parse markdown content and format code blocks
+function parseMarkdownContent(text) {
+  // First escape HTML
+  let escaped = escapeHtml(text);
+
+  // Match code blocks with optional language specifier: ```language\ncode\n```
+  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
+
+  let result = escaped.replace(codeBlockRegex, (match, language, code) => {
+    const lang = language || 'code';
+    const codeId = 'code-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
+    // Store code for overlay access
+    return `<div class="readie-code-block" data-code-id="${codeId}" data-language="${lang}">
+      <div class="readie-code-header">
+        <span class="readie-code-lang">${lang}</span>
+        <button class="readie-code-expand-btn" onclick="window.readieShowCodeOverlay('${codeId}')">Expand</button>
+      </div>
+      <pre class="readie-code-content"><code>${code.trim()}</code></pre>
+    </div>`;
+  });
+
+  // Match inline code: `code`
+  result = result.replace(/`([^`]+)`/g, '<code class="readie-inline-code">$1</code>');
+
+  // Convert newlines to <br> for non-code content
+  result = result.replace(/\n/g, '<br>');
+
+  return result;
+}
+
+// Store code blocks for overlay access
+const codeBlockStore = {};
+
+// Show code overlay
+window.readieShowCodeOverlay = function(codeId) {
+  const codeBlock = document.querySelector(`[data-code-id="${codeId}"]`);
+  if (!codeBlock) return;
+
+  const code = codeBlock.querySelector('code').textContent;
+  const language = codeBlock.dataset.language;
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'readie-code-overlay';
+  overlay.innerHTML = `
+    <div class="readie-code-overlay-backdrop"></div>
+    <div class="readie-code-overlay-container">
+      <div class="readie-code-overlay-header">
+        <span class="readie-code-overlay-lang">${language}</span>
+        <div class="readie-code-overlay-actions">
+          <button class="readie-code-copy-btn">Copy</button>
+          <button class="readie-code-close-btn">Close</button>
+        </div>
+      </div>
+      <div class="readie-code-overlay-body">
+        <pre><code>${escapeHtml(code)}</code></pre>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Close on backdrop click
+  overlay.querySelector('.readie-code-overlay-backdrop').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  // Close button
+  overlay.querySelector('.readie-code-close-btn').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  // Copy button
+  overlay.querySelector('.readie-code-copy-btn').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      const copyBtn = overlay.querySelector('.readie-code-copy-btn');
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  });
+
+  // Close on Escape
+  const handleEscapeOverlay = (e) => {
+    if (e.key === 'Escape') {
+      overlay.remove();
+      document.removeEventListener('keydown', handleEscapeOverlay);
+    }
+  };
+  document.addEventListener('keydown', handleEscapeOverlay);
+};
 
 // Close query panel
 function closeQueryPanel() {
