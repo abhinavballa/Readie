@@ -2,10 +2,12 @@
   "manifest_version": 3,
   "name": "Readie",
   "version": "1.0.0",
-  "description": "Universal reading copilot - highlight text and ask questions about anything on your screen",
+  "description": "Universal reading copilot - ask questions about anything on your screen, with pages you add as context",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "offscreen",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -16,8 +18,8 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["overlay.css"],
+      "js": ["drag.js", "content.js"],
+      "css": ["overlay.css", "drag.css"],
       "run_at": "document_end"
     }
   ],
@@ -36,6 +38,13 @@
         "mac": "Alt+Shift+R"
       },
       "description": "Toggle screen selection mode"
+    },
+    "context-menu": {
+      "suggested_key": {
+        "default": "Alt+Shift+C",
+        "mac": "Alt+Shift+C"
+      },
+      "description": "Open the context menu: add this page, or start a new context window"
     }
   },
   "icons": {

@@ -9,6 +9,8 @@ A universal reading copilot Chrome extension that works on any text displayed on
 - 🔒 **Privacy First**: Your API key stays local, direct calls to OpenAI
 - ⚡ **No Backend Required**: Simple client-side extension
 - 🎯 **Works Everywhere**: Any webpage, any content
+- 📚 **Page context (RAG)**: Press `Alt+Shift+C` to add the page or PDF you're reading. It's semantically chunked and embedded once, and answers draw on the relevant parts of everything in context. The conversation continues across tabs until you start a new context window.
+- ✋ **Draggable panel**: Move the chat panel anywhere; it remembers its position
 
 ## Quick Start
 
@@ -30,7 +32,6 @@ Simple and straightforward - no backend server needed!
 
 ## Future Plans
 
-- RAG integration for referencing research papers
 - Query history
 - Custom prompt templates
 - Support for other LLM providers
