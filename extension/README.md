@@ -32,10 +32,30 @@ Get your API key from [platform.openai.com/api-keys](https://platform.openai.com
 
 ## Usage
 
-1. **Activate**: Press `Alt+Shift+R` (or `Option+Shift+R` on Mac)
-2. **Select**: Drag to select any area on the screen
-3. **Ask**: Type your question about the selected content
-4. **Get Answer**: Receive AI-powered explanations instantly
+1. **Add context** (optional): Press `Alt+Shift+C` on any web page or PDF and choose **Add this page to context**
+2. **Select**: Press `Alt+Shift+R` (or `Option+Shift+R` on Mac) and drag to select any area on the screen
+3. **Ask**: Type your question about the selection (or ask without a selection)
+4. **Get Answer**: Readie answers using your selection plus the most relevant parts of every page in context
+
+### Context windows (RAG)
+
+Readie keeps one ongoing conversation, the *context window*. It carries across tabs, page
+loads and closing the panel, and lasts until you start a new one.
+
+- `Alt+Shift+C` opens the context menu:
+  1. **Add this page to context**. The page or PDF is indexed once and joins the current context. If the page is already added, this becomes **Re-index this page**, and **Remove this page from context** also appears.
+  2. **New context window with this page** forgets the previous pages and conversation.
+  3. **New empty context window**
+  4. **Open / close chat**
+- Pages are indexed once with **semantic chunking**. Each sentence is embedded with its
+  neighbours, and a chunk ends where the topic shifts or at a heading. Chunks are embedded
+  with OpenAI `text-embedding-3-small` and stored locally in IndexedDB.
+- For each question, Readie transcribes your selection (once, with `gpt-4o-mini`) and looks up the
+  most relevant chunks. Only those chunks are sent to GPT-4o, never the whole page.
+- **Settings → "When I go to a new page"** chooses between keeping the context (default) and starting a new context window automatically.
+- PDFs open in Chrome's viewer are read with pdf.js (bundled in `lib/pdfjs`). For local `file://` PDFs, turn on
+  "Allow access to file URLs" for Readie in `chrome://extensions`.
+- The chat panel can be dragged by its header. Double-click the header to re-center it.
 
 ### Example Use Cases
 
@@ -49,6 +69,7 @@ Get your API key from [platform.openai.com/api-keys](https://platform.openai.com
 ## Keyboard Shortcuts
 
 - `Alt+Shift+R` (or `Option+Shift+R` on Mac) - Toggle selection mode
+- `Alt+Shift+C` - Context menu (add this page, new context window, open chat)
 - `Escape` - Cancel selection or close panel
 - `Enter` - Submit question (Shift+Enter for new line)
 

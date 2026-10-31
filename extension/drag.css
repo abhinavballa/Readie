@@ -1,0 +1,22 @@
+/* drag.css — styles for the draggable Readie panel header (loaded after overlay.css). */
+
+#readie-query-panel .readie-drag-handle {
+  cursor: grab;
+  touch-action: none; /* let pointer events drive dragging on touch/pen */
+}
+
+#readie-query-panel .readie-drag-handle.readie-dragging {
+  cursor: grabbing;
+}
+
+/* Interactive controls inside the header keep their normal cursor. */
+#readie-query-panel .readie-drag-handle button,
+#readie-query-panel .readie-drag-handle a {
+  cursor: pointer;
+}
+
+#readie-query-panel .readie-drag-handle input,
+#readie-query-panel .readie-drag-handle textarea,
+#readie-query-panel .readie-drag-handle select {
+  cursor: auto;
+}

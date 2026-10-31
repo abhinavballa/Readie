@@ -63,4 +63,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   openaiKeyInput.addEventListener('blur', function() {
     this.type = 'password';
   });
+
+  // ---------- Context window ----------
+
+  const sessionStatus = document.getElementById('sessionStatus');
+  const newSessionBtn = document.getElementById('newSession');
+
+  async function renderSession() {
+    const session = await chrome.runtime.sendMessage({ action: 'getSession', includeMessages: false });
+    if (!session || session.error) {
+      sessionStatus.textContent = 'Could not load the current context.';
+      return;
+    }
+    const pages = session.docs.length;
+    sessionStatus.textContent = pages || session.messageCount
+      ? `${pages} page${pages === 1 ? '' : 's'} in context · ${session.messageCount} message${session.messageCount === 1 ? '' : 's'}`
+      : 'Empty. Press Alt+Shift+C on a page to add it.';
+    if (pages) {
+      sessionStatus.title = session.docs.map(d => d.title).join('\n');
+    }
+  }
+
+  newSessionBtn.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({ action: 'newSession' });
+    renderSession();
+  });
+
+  const { contextOnNavigate } = await chrome.storage.sync.get(['contextOnNavigate']);
+  const mode = contextOnNavigate === 'new' ? 'new' : 'keep';
+  document.querySelectorAll('input[name="contextOnNavigate"]').forEach(radio => {
+    radio.checked = radio.value === mode;
+    radio.addEventListener('change', () => {
+      if (radio.checked) chrome.storage.sync.set({ contextOnNavigate: radio.value });
+    });
+  });
+
+  renderSession();
 });
