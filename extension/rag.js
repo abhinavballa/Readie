@@ -25,8 +25,10 @@ const RAG = (() => {
   const MAX_DOC_CHARS = 600000;         // ~150k tokens (~300 pages) per document
 
   const DB_NAME = 'readie-session';
+  const DB_VERSION = 2;
   const KB_STORE = 'kb';                // single record: { id: 'current', docs, chunks }
   const MSG_STORE = 'messages';         // conversation, append-only
+  const DATASET_STORE = 'dataset';      // rated answers for fine-tuning; never cleared by resetSession
 
   // ---------- IndexedDB ----------
 
@@ -35,10 +37,18 @@ const RAG = (() => {
   function openDb() {
     if (!dbPromise) {
       dbPromise = new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => {
-          req.result.createObjectStore(KB_STORE, { keyPath: 'id' });
-          req.result.createObjectStore(MSG_STORE, { keyPath: 'id', autoIncrement: true });
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        // Migrations by version; existing stores and their data are kept
+        req.onupgradeneeded = (event) => {
+          const db = req.result;
+          if (event.oldVersion < 1) {
+            db.createObjectStore(KB_STORE, { keyPath: 'id' });
+            db.createObjectStore(MSG_STORE, { keyPath: 'id', autoIncrement: true });
+          }
+          if (event.oldVersion < 2) {
+            const store = db.createObjectStore(DATASET_STORE, { keyPath: 'id', autoIncrement: true });
+            store.createIndex('rating', 'rating');
+          }
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => {
@@ -68,12 +78,44 @@ const RAG = (() => {
   const putKb = (kb) => tx(KB_STORE, 'readwrite', s => s.put(kb));
 
   const getMessages = () => tx(MSG_STORE, 'readonly', s => s.getAll());
+  // Resolves to the new message's id (autoIncrement key)
   const addMessage = (msg) => tx(MSG_STORE, 'readwrite', s => s.add({ ...msg, createdAt: Date.now() }));
+  const getMessage = (id) => tx(MSG_STORE, 'readonly', s => s.get(id));
 
+  // Merge fields into a stored message. Resolves to the updated message, or null.
+  async function updateMessage(id, patch) {
+    const msg = await getMessage(id);
+    if (!msg) return null;
+    const updated = { ...msg, ...patch };
+    await tx(MSG_STORE, 'readwrite', s => s.put(updated));
+    return updated;
+  }
+
+  // Clears the kb and conversation only; the training dataset is kept
   async function resetSession() {
     await tx(KB_STORE, 'readwrite', s => s.clear());
     await tx(MSG_STORE, 'readwrite', s => s.clear());
   }
+
+  // ---------- Training dataset ----------
+  // Records: { id, rating: 'satisfactory'|'unsatisfactory', messages: [...OpenAI chat messages],
+  //            messageId, model, createdAt, ratedAt }
+
+  // Adds a record, or replaces it when record.id is set. Resolves to its id.
+  const putTrainingExample = (record) => tx(DATASET_STORE, 'readwrite', s =>
+    record.id == null ? s.add(record) : s.put(record));
+
+  // All records, or only those with the given rating
+  const getTrainingExamples = (rating) => tx(DATASET_STORE, 'readonly', s =>
+    rating ? s.index('rating').getAll(rating) : s.getAll());
+
+  async function countTrainingExamples() {
+    const examples = await getTrainingExamples();
+    const satisfactory = examples.filter(e => e.rating === 'satisfactory').length;
+    return { satisfactory, unsatisfactory: examples.length - satisfactory, total: examples.length };
+  }
+
+  const clearTrainingData = () => tx(DATASET_STORE, 'readwrite', s => s.clear());
 
   // ---------- Embeddings ----------
 
@@ -371,6 +413,8 @@ const RAG = (() => {
 
   return {
     getKb, addDocument, removeDocument, retrieve, summarize, sectionsFromWebText,
-    getMessages, addMessage, resetSession, MAX_DOC_CHARS
+    getMessages, addMessage, resetSession, MAX_DOC_CHARS,
+    getMessage, updateMessage,
+    putTrainingExample, getTrainingExamples, countTrainingExamples, clearTrainingData
   };
 })();

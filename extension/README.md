@@ -57,6 +57,40 @@ loads and closing the panel, and lasts until you start a new one.
   "Allow access to file URLs" for Readie in `chrome://extensions`.
 - The chat panel can be dragged by its header. Double-click the header to re-center it.
 
+### Rating answers and training data
+
+Now and then Readie asks **"Was this answer helpful?"** under an answer in the panel. You can pick
+**Satisfactory** or **Unsatisfactory**, or close it with ×. Set how often it asks under
+**Settings → Ask me to rate answers**: every answer, sometimes (about 1 in 3, and never twice
+in a row; this is the default), or never.
+
+Each rated answer is saved as a training example in IndexedDB (the `dataset` store). It holds exactly
+what GPT-4o saw: the system prompt with the retrieved excerpts, the conversation history and your
+question, followed by its answer. Screenshots are saved as their transcription text rather than
+as images, which keeps the dataset small (see `DATASET_INCLUDE_IMAGES` in `background.js`). Training
+data stays on your device. Starting a new context window does not clear it; only
+**Settings → Clear training data** does. Readie never uploads it or starts fine-tuning for you.
+
+**Settings → Training data** has:
+- **Export for fine-tuning (.jsonl)**: satisfactory examples only, one `{"messages": [...]}` per line.
+  This is OpenAI's chat fine-tuning format.
+- **Export all ratings (.jsonl)**: every rated example, each line with `"rating"`.
+
+To fine-tune with OpenAI:
+1. **Supervised fine-tuning (SFT).** Upload the fine-tuning export with purpose `fine-tune` and create
+   a job on a model that supports fine-tuning, for example `gpt-4o-2024-08-06` or `gpt-4o-mini`. Use the
+   [dashboard](https://platform.openai.com/finetune) or the API:
+   `POST /v1/files` (purpose `fine-tune`), then `POST /v1/fine_tuning/jobs` with
+   `{"training_file": "<file id>", "model": "gpt-4o-mini-2024-07-18"}`. OpenAI requires at least 10 examples.
+2. **Preference fine-tuning (DPO).** Each DPO line needs a preferred and a rejected answer to the same
+   prompt: `{"input": {"messages": [...]}, "preferred_output": [{"role": "assistant", ...}],
+   "non_preferred_output": [{"role": "assistant", ...}]}`. Take the unsatisfactory lines from the
+   all-ratings export. Their `messages` minus the last one is the `input`, and the last (assistant)
+   message is the `non_preferred_output`. Write or generate a better answer for `preferred_output`,
+   then create the job with `"method": {"type": "dpo"}`.
+
+Once you have a fine-tuned model, change `model: 'gpt-4o'` in `queryOpenAI` (`background.js`) to its id.
+
 ### Example Use Cases
 
 - 📄 Explain complex research papers

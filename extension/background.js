@@ -9,6 +9,16 @@ importScripts('rag.js');
 const RETRIEVAL_TOP_K = 6;        // chunks sent with each question
 const HISTORY_MESSAGES = 20;      // past messages sent to the model each turn
 
+// Rating prompts. feedbackRate (chrome.storage.sync): 'always' | 'sometimes' | 'off',
+// or a probability 0..1. 'sometimes' (the default) asks about 1 in 3 answers.
+const FEEDBACK_RATES = { always: 1, sometimes: 1 / 3, off: 0 };
+const DEFAULT_FEEDBACK_RATE = 'sometimes';
+
+// Training examples store screenshots as their transcription text, not base64.
+// That keeps the dataset small and the examples usable for text-only fine-tuning.
+// Set to true to keep the image parts exactly as sent (much larger records).
+const DATASET_INCLUDE_IMAGES = false;
+
 // Listen for messages from content scripts and the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Messages meant for the offscreen document are not ours
@@ -53,6 +63,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     case 'ask':
       return reply(handleQuestion(request.question, request.selection || null));
+
+    case 'rateResponse':
+      return reply(rateResponse(request.id, request.rating));
+
+    case 'getTrainingStats':
+      return reply(RAG.countTrainingExamples());
+
+    case 'exportTrainingData':
+      return reply(exportTrainingData(request.rating));
+
+    case 'clearTrainingData':
+      return reply(RAG.clearTrainingData().then(() => RAG.countTrainingExamples()));
   }
 });
 
@@ -110,7 +132,8 @@ async function getSession(url, includeMessages = true) {
     ...kb,
     mode: await getNavigationMode(),
     messageCount: messages.length,
-    messages: includeMessages ? messages : undefined,
+    // trainingMessages is large and only needed here, so it stays in the background
+    messages: includeMessages ? messages.map(({ trainingMessages, ...m }) => m) : undefined,
     currentPageIncluded: Boolean(url && kb.docs.some(d => d.url === normalizeUrl(url)))
   };
 }
@@ -262,6 +285,12 @@ async function handleQuestion(question, selection) {
   const userMessage = { role: 'user', content: question, selection };
   const result = await queryOpenAI([...history, userMessage], retrieved, apiKey);
 
+  // Exactly what the model saw (system prompt with excerpts, history, this turn),
+  // kept so a rating can turn this answer into a training example
+  const trainingMessages = DATASET_INCLUDE_IMAGES
+    ? result.requestMessages
+    : imagesToText(result.requestMessages, [...history, userMessage]);
+
   const assistantMessage = {
     role: 'assistant',
     content: result.answer,
@@ -272,11 +301,100 @@ async function handleQuestion(question, selection) {
       sources: retrieved ? [...new Set(retrieved.chunks.map(c => c.label).filter(Boolean))] : []
     }
   };
+  if (await shouldAskFeedback(history)) assistantMessage.feedbackRequested = true;
 
-  await RAG.addMessage(userMessage);
-  await RAG.addMessage(assistantMessage);
+  userMessage.id = await RAG.addMessage(userMessage);
+  assistantMessage.id = await RAG.addMessage({ ...assistantMessage, trainingMessages });
 
   return { userMessage, assistantMessage };
+}
+
+// ---------- Ratings and training data ----------
+
+function feedbackProbability(rate) {
+  if (typeof rate === 'number' && rate >= 0 && rate <= 1) return rate;
+  return FEEDBACK_RATES[rate] ?? FEEDBACK_RATES[DEFAULT_FEEDBACK_RATE];
+}
+
+// Ask at random at the configured rate, but never twice in a row (unless 'always')
+async function shouldAskFeedback(history) {
+  let rate;
+  try {
+    ({ feedbackRate: rate } = (await chrome.storage.sync.get(['feedbackRate'])) || {});
+  } catch (_) {
+    return false;
+  }
+  const p = feedbackProbability(rate);
+  if (p >= 1) return true;
+  if (p <= 0) return false;
+  const lastAnswer = [...history].reverse().find(m => m.role === 'assistant');
+  if (lastAnswer?.feedbackRequested) return false;
+  return Math.random() < p;
+}
+
+// Replace screenshot parts with their transcription (see DATASET_INCLUDE_IMAGES)
+function imagesToText(requestMessages, messages) {
+  const transcriptions = new Map();
+  for (const m of messages) {
+    if (m.selection?.image) transcriptions.set(m.selection.image, m.selection.text || '');
+  }
+  return requestMessages.map(m => {
+    if (!Array.isArray(m.content)) return m;
+    const text = m.content.map(part => {
+      if (part.type !== 'image_url') return part.text || '';
+      const t = transcriptions.get(part.image_url?.url);
+      return t ? `[Transcription of the screenshot]\n"""\n${t}\n"""` : '[Screenshot not transcribed]';
+    }).join('\n\n');
+    return { ...m, content: text };
+  });
+}
+
+// rating: 'satisfactory' | 'unsatisfactory' | 'dismissed'
+async function rateResponse(id, rating) {
+  if (!['satisfactory', 'unsatisfactory', 'dismissed'].includes(rating)) {
+    throw new Error('Unknown rating: ' + rating);
+  }
+  const msg = await RAG.getMessage(id);
+  if (!msg || msg.role !== 'assistant') throw new Error('Answer not found.');
+
+  // Dismissing never overrides a real rating
+  if (rating === 'dismissed') {
+    if (!msg.rating) await RAG.updateMessage(id, { rating });
+    return { id, rating: msg.rating || rating, saved: false };
+  }
+
+  let datasetId = msg.datasetId ?? null;
+  if (msg.trainingMessages) {
+    // Re-rating the same answer replaces its record instead of adding a duplicate
+    const record = {
+      rating,
+      messages: [...msg.trainingMessages, { role: 'assistant', content: msg.content }],
+      messageId: id,
+      model: msg.meta?.model || null,
+      createdAt: msg.createdAt,
+      ratedAt: Date.now()
+    };
+    if (datasetId != null) record.id = datasetId;
+    datasetId = await RAG.putTrainingExample(record);
+  }
+
+  await RAG.updateMessage(id, { rating, datasetId });
+  return { id, rating, saved: datasetId != null, stats: await RAG.countTrainingExamples() };
+}
+
+// rating 'satisfactory': OpenAI fine-tuning JSONL ({"messages": [...]} per line).
+// rating 'all': every rated example, each line with its rating.
+async function exportTrainingData(rating = 'satisfactory') {
+  if (rating === 'all') {
+    const examples = await RAG.getTrainingExamples();
+    const lines = examples.map(e => JSON.stringify({
+      rating: e.rating, messages: e.messages, model: e.model, ratedAt: e.ratedAt
+    }));
+    return { count: lines.length, jsonl: lines.join('\n') + (lines.length ? '\n' : '') };
+  }
+  const examples = await RAG.getTrainingExamples('satisfactory');
+  const lines = examples.map(e => JSON.stringify({ messages: e.messages }));
+  return { count: lines.length, jsonl: lines.join('\n') + (lines.length ? '\n' : '') };
 }
 
 // Cheap one-off transcription of the selected region
@@ -376,8 +494,17 @@ function toOpenAIMessages(messages) {
   });
 }
 
+// The messages array sent to OpenAI for a question
+function buildRequestMessages(messages, retrieved) {
+  return [
+    { role: 'system', content: buildSystemPrompt(retrieved) },
+    ...toOpenAIMessages(messages)
+  ];
+}
+
 // Query OpenAI GPT-4o
 async function queryOpenAI(messages, retrieved, apiKey) {
+  const requestMessages = buildRequestMessages(messages, retrieved);
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -386,10 +513,7 @@ async function queryOpenAI(messages, retrieved, apiKey) {
     },
     body: JSON.stringify({
       model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: buildSystemPrompt(retrieved) },
-        ...toOpenAIMessages(messages)
-      ],
+      messages: requestMessages,
       max_tokens: 1000
     })
   });
@@ -403,6 +527,7 @@ async function queryOpenAI(messages, retrieved, apiKey) {
   return {
     answer: data.choices[0].message.content,
     model: data.model,
-    tokens_used: data.usage.total_tokens
+    tokens_used: data.usage.total_tokens,
+    requestMessages
   };
 }

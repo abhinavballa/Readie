@@ -356,6 +356,33 @@ async function handlePanelClick(e) {
   const expandBtn = t.closest('.readie-code-expand-btn');
   if (expandBtn) {
     showCodeOverlay(expandBtn.closest('.readie-code-block'));
+    return;
+  }
+
+  const rateBtn = t.closest('[data-rate]');
+  if (rateBtn) {
+    rateAnswer(rateBtn.closest('.readie-feedback'), rateBtn.dataset.rate);
+  }
+}
+
+// Send a rating (or dismissal) for an answer; the prompt is replaced right away
+async function rateAnswer(prompt, rating) {
+  if (!prompt || prompt.dataset.done) return;
+  prompt.dataset.done = 'true';
+  const id = Number(prompt.dataset.feedbackId);
+
+  if (rating === 'dismissed') {
+    prompt.remove();
+  } else {
+    prompt.innerHTML = '<span class="readie-muted">Thanks for the feedback.</span>';
+    setTimeout(() => prompt.remove(), 2500);
+  }
+
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'rateResponse', id, rating });
+    if (response?.error) console.warn('Readie: Could not save rating:', response.error);
+  } catch (error) {
+    console.warn('Readie: Could not save rating:', error); // extension was reloaded
   }
 }
 
@@ -433,6 +460,13 @@ function addMessageToChat(message) {
       <div class="readie-message-label">Assistant</div>
       <div class="readie-message-content">${parseMarkdownContent(message.content)}</div>
       ${parts.length ? `<div class="readie-message-meta">${escapeHtml(parts.join(' · '))}</div>` : ''}
+      ${message.feedbackRequested && !message.rating && message.id != null ? `
+        <div class="readie-feedback" data-feedback-id="${Number(message.id)}">
+          <span class="readie-feedback-question">Was this answer helpful?</span>
+          <button class="readie-feedback-btn" data-rate="satisfactory">Satisfactory</button>
+          <button class="readie-feedback-btn" data-rate="unsatisfactory">Unsatisfactory</button>
+          <button class="readie-feedback-dismiss" data-rate="dismissed" title="Don't rate this answer">×</button>
+        </div>` : ''}
     `;
   } else if (message.role === 'loading') {
     div.className = 'readie-message readie-message-assistant';

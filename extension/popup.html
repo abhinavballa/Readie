@@ -97,6 +97,11 @@
       transform: scale(0.98);
     }
 
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .status {
       margin-top: 12px;
       padding: 10px 12px;
@@ -175,6 +180,20 @@
     .secondary-btn:hover {
       background: #eef2ff;
     }
+
+    .button-stack button + button {
+      margin-top: 8px;
+    }
+
+    .danger-btn {
+      background: white;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .danger-btn:hover {
+      background: #fef2f2;
+    }
   </style>
 </head>
 <body>
@@ -209,6 +228,34 @@
       <input type="radio" name="contextOnNavigate" value="new">
       <span>Start a new context window automatically</span>
     </label>
+  </div>
+
+  <div class="section" style="margin-top: 16px;">
+    <label>Ask me to rate answers</label>
+    <label class="radio-row">
+      <input type="radio" name="feedbackRate" value="always">
+      <span>After every answer</span>
+    </label>
+    <label class="radio-row">
+      <input type="radio" name="feedbackRate" value="sometimes">
+      <span>Sometimes (about 1 in 3 answers)</span>
+    </label>
+    <label class="radio-row">
+      <input type="radio" name="feedbackRate" value="off">
+      <span>Never</span>
+    </label>
+
+    <label style="margin-top: 14px;">Training data</label>
+    <div class="session-status" id="trainingStatus">Loading…</div>
+    <div class="button-stack">
+      <button id="exportSft" class="secondary-btn">Export for fine-tuning (.jsonl)</button>
+      <button id="exportAll" class="secondary-btn">Export all ratings (.jsonl)</button>
+      <button id="clearTraining" class="danger-btn">Clear training data</button>
+    </div>
+    <div class="help-text">
+      Rated answers are kept on this device, even when you start a new context window.
+      The fine-tuning export has only satisfactory answers, in OpenAI chat format.
+    </div>
   </div>
 
   <div class="section" style="margin-top: 16px;">

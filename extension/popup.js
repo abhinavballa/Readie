@@ -99,4 +99,82 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   renderSession();
+
+  // ---------- Rating prompts and training data ----------
+
+  const { feedbackRate } = await chrome.storage.sync.get(['feedbackRate']);
+  const rate = ['always', 'sometimes', 'off'].includes(feedbackRate) ? feedbackRate : 'sometimes';
+  document.querySelectorAll('input[name="feedbackRate"]').forEach(radio => {
+    radio.checked = radio.value === rate;
+    radio.addEventListener('change', () => {
+      if (radio.checked) chrome.storage.sync.set({ feedbackRate: radio.value });
+    });
+  });
+
+  const trainingStatus = document.getElementById('trainingStatus');
+  const exportSftBtn = document.getElementById('exportSft');
+  const exportAllBtn = document.getElementById('exportAll');
+  const clearTrainingBtn = document.getElementById('clearTraining');
+
+  function renderTrainingStats(stats) {
+    if (!stats || stats.error) {
+      trainingStatus.textContent = 'Could not load training data.';
+      return;
+    }
+    trainingStatus.textContent = `${stats.satisfactory} satisfactory · ${stats.unsatisfactory} unsatisfactory`;
+    exportSftBtn.disabled = stats.satisfactory === 0;
+    exportAllBtn.disabled = stats.total === 0;
+  }
+
+  async function refreshTrainingStats() {
+    renderTrainingStats(await chrome.runtime.sendMessage({ action: 'getTrainingStats' }));
+  }
+
+  // Save text as a file via a temporary link
+  function download(filename, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/jsonl' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function exportTraining(rating, name) {
+    const result = await chrome.runtime.sendMessage({ action: 'exportTrainingData', rating });
+    if (!result || result.error) {
+      showStatus('Export failed: ' + (result?.error || 'no response'), 'error');
+      return;
+    }
+    if (result.count === 0) {
+      showStatus('Nothing to export yet.', 'error');
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    download(`readie-${name}-${date}.jsonl`, result.jsonl);
+  }
+
+  exportSftBtn.addEventListener('click', () => exportTraining('satisfactory', 'finetune'));
+  exportAllBtn.addEventListener('click', () => exportTraining('all', 'ratings'));
+
+  // Two clicks to clear: the first one asks for confirmation
+  let clearArmed = null;
+  clearTrainingBtn.addEventListener('click', async () => {
+    if (!clearArmed) {
+      clearTrainingBtn.textContent = 'Click again to delete all training data';
+      clearArmed = setTimeout(() => {
+        clearArmed = null;
+        clearTrainingBtn.textContent = 'Clear training data';
+      }, 4000);
+      return;
+    }
+    clearTimeout(clearArmed);
+    clearArmed = null;
+    clearTrainingBtn.textContent = 'Clear training data';
+    renderTrainingStats(await chrome.runtime.sendMessage({ action: 'clearTrainingData' }));
+  });
+
+  refreshTrainingStats();
 });
