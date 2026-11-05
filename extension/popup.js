@@ -100,6 +100,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderSession();
 
+  // ---------- Theme ----------
+
+  // theme.js already applied the saved theme; saving here updates every open tab too
+  const themeSettings = readieApplyTheme(await chrome.storage.sync.get(['theme', 'accent']));
+  for (const name of ['theme', 'accent']) {
+    document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+      radio.checked = radio.value === themeSettings[name];
+      radio.addEventListener('change', () => {
+        if (!radio.checked) return;
+        themeSettings[name] = radio.value;
+        readieApplyTheme(themeSettings);
+        chrome.storage.sync.set({ [name]: radio.value });
+      });
+    });
+  }
+
   // ---------- Rating prompts and training data ----------
 
   const { feedbackRate } = await chrome.storage.sync.get(['feedbackRate']);

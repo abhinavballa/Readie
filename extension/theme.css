@@ -1,0 +1,114 @@
+/* Readie theme: color tokens shared by the in-page UI (overlay.css) and the popup.
+ * theme.js sets data-readie-theme ('light' | 'dark' | 'system') and
+ * data-readie-accent on <html>. With no attribute, the OS setting decides.
+ * Every name is prefixed --readie- so it can't clash with the host page. */
+
+:root {
+  --readie-accent: #4A90E2;
+
+  --readie-bg: #ffffff;
+  --readie-bg-subtle: #f9fafb;
+  --readie-bg-muted: #f3f4f6;
+  --readie-border: #e5e7eb;
+  --readie-border-strong: #d1d5db;
+  --readie-text: #1f2937;
+  --readie-text-2: #374151;
+  --readie-text-muted: #6b7280;
+  --readie-text-faint: #9ca3af;
+  --readie-divider: rgba(0, 0, 0, 0.1);
+
+  --readie-user-bg: #e0f2fe;
+  --readie-user-border: #0284c7;
+  --readie-assistant-bg: #f0fdf4;
+  --readie-assistant-border: #16a34a;
+
+  --readie-success: #16a34a;
+  --readie-success-bg: #dcfce7;
+  --readie-success-text: #065f46;
+  --readie-danger: #dc2626;
+  --readie-danger-bg: #fef2f2;
+  --readie-danger-border: #fecaca;
+  --readie-danger-text: #991b1b;
+  --readie-inline-code: #e11d48;
+  --readie-toast-bg: #1f2937;
+  --readie-scheme: light;
+}
+
+/* Accent colors */
+:root[data-readie-accent="blue"]   { --readie-accent: #4A90E2; }
+:root[data-readie-accent="indigo"] { --readie-accent: #6366f1; }
+:root[data-readie-accent="green"]  { --readie-accent: #16a34a; }
+:root[data-readie-accent="rose"]   { --readie-accent: #e11d48; }
+:root[data-readie-accent="orange"] { --readie-accent: #ea580c; }
+:root[data-readie-accent="purple"] { --readie-accent: #9333ea; }
+
+/* Colors derived from the accent, so each accent needs only one value */
+:root {
+  --readie-on-accent: #ffffff;
+  --readie-accent-hover: color-mix(in srgb, var(--readie-accent) 82%, black);
+  --readie-accent-soft: color-mix(in srgb, var(--readie-accent) 12%, var(--readie-bg));
+  --readie-accent-soft-border: color-mix(in srgb, var(--readie-accent) 28%, var(--readie-bg));
+  --readie-accent-text: color-mix(in srgb, var(--readie-accent) 70%, var(--readie-text));
+  --readie-accent-ring: color-mix(in srgb, var(--readie-accent) 22%, transparent);
+}
+
+/* Dark: chosen explicitly, or "system" while the OS is in dark mode */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-readie-theme="light"]) {
+    --readie-bg: #1e2228;
+    --readie-bg-subtle: #171a1f;
+    --readie-bg-muted: #2a2f37;
+    --readie-border: #333a43;
+    --readie-border-strong: #474f5a;
+    --readie-text: #e6e8eb;
+    --readie-text-2: #c9cdd3;
+    --readie-text-muted: #9aa1ab;
+    --readie-text-faint: #6f7782;
+    --readie-divider: rgba(255, 255, 255, 0.1);
+
+    --readie-user-bg: #12283a;
+    --readie-user-border: #38bdf8;
+    --readie-assistant-bg: #11281c;
+    --readie-assistant-border: #4ade80;
+
+    --readie-success: #4ade80;
+    --readie-success-bg: #133d24;
+    --readie-success-text: #bbf7d0;
+    --readie-danger: #f87171;
+    --readie-danger-bg: #3a1a1a;
+    --readie-danger-border: #7f2d2d;
+    --readie-danger-text: #fca5a5;
+    --readie-inline-code: #fb7185;
+    --readie-toast-bg: #374151;
+    --readie-scheme: dark;
+  }
+}
+
+:root[data-readie-theme="dark"] {
+  --readie-bg: #1e2228;
+  --readie-bg-subtle: #171a1f;
+  --readie-bg-muted: #2a2f37;
+  --readie-border: #333a43;
+  --readie-border-strong: #474f5a;
+  --readie-text: #e6e8eb;
+  --readie-text-2: #c9cdd3;
+  --readie-text-muted: #9aa1ab;
+  --readie-text-faint: #6f7782;
+  --readie-divider: rgba(255, 255, 255, 0.1);
+
+  --readie-user-bg: #12283a;
+  --readie-user-border: #38bdf8;
+  --readie-assistant-bg: #11281c;
+  --readie-assistant-border: #4ade80;
+
+  --readie-success: #4ade80;
+  --readie-success-bg: #133d24;
+  --readie-success-text: #bbf7d0;
+  --readie-danger: #f87171;
+  --readie-danger-bg: #3a1a1a;
+  --readie-danger-border: #7f2d2d;
+  --readie-danger-text: #fca5a5;
+  --readie-inline-code: #fb7185;
+  --readie-toast-bg: #374151;
+  --readie-scheme: dark;
+}

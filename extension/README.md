@@ -116,6 +116,18 @@ Once you have a fine-tuned model, change `model: 'gpt-4o'` in `queryOpenAI` (`ba
 
 ## Customization
 
+### Theme
+
+Open the Readie settings popup and pick a **Theme** (System, Light or Dark) and an
+**Accent color**. System follows your OS's light/dark setting. Changes apply right away
+to the chat panel, the context menu and the popup in every open tab. Code blocks stay
+dark in both themes.
+
+The colors live in `theme.css` as `--readie-*` variables. To add an accent, add a line
+there, add its name to `READIE_ACCENTS` in `theme.js`, and add a swatch to `popup.html`.
+
+### Keyboard shortcuts
+
 You can customize the keyboard shortcut:
 1. Go to `chrome://extensions/shortcuts`
 2. Find "Readie"
@@ -146,6 +158,8 @@ extension/
 ├── background.js       # API calls and background logic
 ├── content.js          # Screen selection and UI
 ├── overlay.css         # Styling
+├── theme.css           # Theme colors (light/dark, accents)
+├── theme.js            # Applies the saved theme
 ├── popup.html          # Settings interface
 ├── popup.js            # Settings logic
 └── icons/             # Extension icons

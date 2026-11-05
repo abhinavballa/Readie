@@ -132,7 +132,8 @@ function createChrome({ sync = {}, pdfResult = null } = {}) {
     },
     storage: {
       sync: createStorageArea(sync),
-      local: createStorageArea()
+      local: createStorageArea(),
+      onChanged: createEvent()
     },
     action: {
       async setBadgeText({ text }) { badge.text = text; },
@@ -208,7 +209,7 @@ function runFile(context, file) {
 }
 
 // Load content.js into a jsdom window. Returns the window.
-function loadContentScript(html = '<!doctype html><html><head><title>T</title></head><body></body></html>', url = 'https://example.com/article') {
+function loadContentScript(html = '<!doctype html><html><head><title>T</title></head><body></body></html>', url = 'https://example.com/article', { sync = {} } = {}) {
   const { JSDOM } = require('jsdom');
   const dom = new JSDOM(html, { url, runScripts: 'outside-only', pretendToBeVisual: true });
   const { window } = dom;
@@ -219,7 +220,7 @@ function loadContentScript(html = '<!doctype html><html><head><title>T</title></
     configurable: true
   });
 
-  const fake = createChrome();
+  const fake = createChrome({ sync });
   const sent = [];
   fake.chrome.runtime.sendMessage = async (msg) => {
     sent.push(msg);
@@ -230,7 +231,9 @@ function loadContentScript(html = '<!doctype html><html><head><title>T</title></
   // Run as a classic script so its top-level let/const are shared with run()
   const vmContext = dom.getInternalVMContext();
   const run = (code, filename) => new vm.Script(code, { filename }).runInContext(vmContext);
-  run(fs.readFileSync(path.join(EXT, 'content.js'), 'utf8'), path.join(EXT, 'content.js'));
+  for (const file of ['theme.js', 'content.js']) {
+    run(fs.readFileSync(path.join(EXT, file), 'utf8'), path.join(EXT, file));
+  }
   return { window, dom, sent, run, ...fake };
 }
 

@@ -2,19 +2,23 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
   <style>
     body {
       width: 400px;
       padding: 20px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
       margin: 0;
-      background: #f9fafb;
+      background: var(--readie-bg-subtle);
+      color: var(--readie-text);
+      color-scheme: var(--readie-scheme);
     }
 
     h2 {
       font-size: 20px;
       margin: 0 0 20px 0;
-      color: #1f2937;
+      color: var(--readie-text);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -25,7 +29,7 @@
     }
 
     .section {
-      background: white;
+      background: var(--readie-bg);
       padding: 16px;
       border-radius: 8px;
       margin-bottom: 16px;
@@ -36,16 +40,18 @@
       display: block;
       font-size: 14px;
       font-weight: 500;
-      color: #374151;
+      color: var(--readie-text-2);
       margin-bottom: 8px;
     }
 
     select, input {
       width: 100%;
       padding: 10px 12px;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--readie-border-strong);
       border-radius: 6px;
       font-size: 14px;
+      background: var(--readie-bg);
+      color: var(--readie-text);
       box-sizing: border-box;
       font-family: inherit;
     }
@@ -56,19 +62,19 @@
 
     input:focus, select:focus {
       outline: none;
-      border-color: #4A90E2;
-      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+      border-color: var(--readie-accent);
+      box-shadow: 0 0 0 3px var(--readie-accent-ring);
     }
 
     .help-text {
       font-size: 12px;
-      color: #6b7280;
+      color: var(--readie-text-muted);
       margin-top: 6px;
       line-height: 1.4;
     }
 
     .help-text a {
-      color: #4A90E2;
+      color: var(--readie-accent);
       text-decoration: none;
     }
 
@@ -79,8 +85,8 @@
     button {
       width: 100%;
       padding: 12px;
-      background: #4A90E2;
-      color: white;
+      background: var(--readie-accent);
+      color: var(--readie-on-accent);
       border: none;
       border-radius: 6px;
       font-size: 14px;
@@ -90,7 +96,7 @@
     }
 
     button:hover {
-      background: #357ABD;
+      background: var(--readie-accent-hover);
     }
 
     button:active {
@@ -112,36 +118,36 @@
     }
 
     .status.success {
-      background: #d1fae5;
-      color: #065f46;
+      background: var(--readie-success-bg);
+      color: var(--readie-success-text);
       display: block;
     }
 
     .status.error {
-      background: #fee2e2;
-      color: #991b1b;
+      background: var(--readie-danger-bg);
+      color: var(--readie-danger-text);
       display: block;
     }
 
     .info-box {
-      background: #f0f9ff;
+      background: var(--readie-accent-soft);
       padding: 14px;
       border-radius: 6px;
       font-size: 13px;
-      color: #0c4a6e;
+      color: var(--readie-text-2);
       line-height: 1.6;
-      border: 1px solid #bae6fd;
+      border: 1px solid var(--readie-accent-soft-border);
     }
 
     .info-box strong {
       display: block;
       margin-bottom: 8px;
-      color: #075985;
+      color: var(--readie-accent-text);
     }
 
     .shortcut {
-      background: #1f2937;
-      color: white;
+      background: var(--readie-toast-bg);
+      color: #ffffff;
       padding: 3px 8px;
       border-radius: 4px;
       font-family: monospace;
@@ -155,7 +161,7 @@
       gap: 8px;
       margin: 8px 0;
       font-size: 13px;
-      color: #374151;
+      color: var(--readie-text-2);
       cursor: pointer;
     }
 
@@ -166,19 +172,19 @@
 
     .session-status {
       font-size: 13px;
-      color: #374151;
+      color: var(--readie-text-2);
       margin-bottom: 10px;
       line-height: 1.5;
     }
 
     .secondary-btn {
-      background: white;
-      color: #4f46e5;
-      border: 1px solid #c7d2fe;
+      background: var(--readie-bg);
+      color: var(--readie-accent-text);
+      border: 1px solid var(--readie-accent-soft-border);
     }
 
     .secondary-btn:hover {
-      background: #eef2ff;
+      background: var(--readie-accent-soft);
     }
 
     .button-stack button + button {
@@ -186,13 +192,82 @@
     }
 
     .danger-btn {
-      background: white;
-      color: #b91c1c;
-      border: 1px solid #fecaca;
+      background: var(--readie-bg);
+      color: var(--readie-danger-text);
+      border: 1px solid var(--readie-danger-border);
     }
 
     .danger-btn:hover {
-      background: #fef2f2;
+      background: var(--readie-danger-bg);
+    }
+
+    .theme-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .theme-row label {
+      flex: 1;
+      margin: 0;
+    }
+
+    .theme-row input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .theme-row span {
+      display: block;
+      padding: 8px 0;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--readie-border-strong);
+      border-radius: 6px;
+      color: var(--readie-text-2);
+      cursor: pointer;
+    }
+
+    .theme-row input:checked + span {
+      background: var(--readie-accent-soft);
+      border-color: var(--readie-accent);
+      color: var(--readie-accent-text);
+    }
+
+    .theme-row input:focus-visible + span,
+    .swatches input:focus-visible + span {
+      box-shadow: 0 0 0 3px var(--readie-accent-ring);
+    }
+
+    .swatches {
+      display: flex;
+      gap: 10px;
+    }
+
+    .swatches label {
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .swatches input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .swatches span {
+      display: block;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--readie-bg);
+      box-shadow: 0 0 0 1px var(--readie-border-strong);
+    }
+
+    .swatches input:checked + span {
+      box-shadow: 0 0 0 2px var(--readie-text);
     }
   </style>
 </head>
@@ -255,6 +330,24 @@
     <div class="help-text">
       Rated answers are kept on this device, even when you start a new context window.
       The fine-tuning export has only satisfactory answers, in OpenAI chat format.
+    </div>
+  </div>
+
+  <div class="section" style="margin-top: 16px;">
+    <label>Theme</label>
+    <div class="theme-row">
+      <label><input type="radio" name="theme" value="system"><span>System</span></label>
+      <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+      <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+    </div>
+    <label>Accent color</label>
+    <div class="swatches">
+      <label title="Blue"><input type="radio" name="accent" value="blue"><span style="background:#4A90E2"></span></label>
+      <label title="Indigo"><input type="radio" name="accent" value="indigo"><span style="background:#6366f1"></span></label>
+      <label title="Green"><input type="radio" name="accent" value="green"><span style="background:#16a34a"></span></label>
+      <label title="Rose"><input type="radio" name="accent" value="rose"><span style="background:#e11d48"></span></label>
+      <label title="Orange"><input type="radio" name="accent" value="orange"><span style="background:#ea580c"></span></label>
+      <label title="Purple"><input type="radio" name="accent" value="purple"><span style="background:#9333ea"></span></label>
     </div>
   </div>
 
